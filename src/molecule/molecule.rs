@@ -1102,21 +1102,19 @@ impl Molecule {
         }
         for at in self.atoms.iter() {
             let r = self.atom_at(at)?.rank();
-            ranks.push(r);
             if r < self.atom_at(&min_atom)?.rank() {
                 min_atom = *at;
             }
         }
-        self.get_closures_for_atom(&ranks, min_atom, None, &mut dp)?;
+        self.get_closures_for_atom(min_atom, None, &mut dp)?;
 
         dp.visited.clear();
-        let smiles = self.build_smiles_for_atom(&ranks, min_atom, None, &mut dp)?;
+        let smiles = self.build_smiles_for_atom(min_atom, None, &mut dp)?;
         Ok(smiles)
     }
 
     fn get_closures_for_atom(
         &self,
-        rankings: &Vec<usize>,
         atom_current: u8,
         atom_parent_opt: Option<u8>,
         dp: &mut DataBus,
@@ -1134,6 +1132,7 @@ impl Molecule {
             nbors.push(n);
         }
         nbors.sort_by_key(|idx| self.atom_at(idx).unwrap().rank());
+        
         for nb in nbors.iter() {
             if dp.ancestors.contains(nb) {
                 dp.opening_closures
@@ -1142,7 +1141,7 @@ impl Molecule {
                     .push(atom_current);
             } else {
                 if !dp.visited.contains(nb) {
-                    self.get_closures_for_atom(rankings, **nb, Some(atom_current), dp)?;
+                    self.get_closures_for_atom(**nb, Some(atom_current), dp)?;
                 }
             }
         }
@@ -1158,7 +1157,6 @@ impl Molecule {
 
     fn build_smiles_for_atom(
         &self,
-        rankings: &Vec<usize>,
         atom_current: u8,
         atom_parent_opt: Option<u8>,
         dp: &mut DataBus,
@@ -1229,8 +1227,8 @@ impl Molecule {
 
         let mut branches: Vec<String> = vec![];
         for n in nbors.iter() {
-            if !dp.visited.contains(&n) {
-                branches.push(self.build_smiles_for_atom(rankings, **n, Some(atom_current), dp)?);
+            if !dp.visited.contains(n) {
+                branches.push(self.build_smiles_for_atom(**n, Some(atom_current), dp)?);
             }
         }
 
